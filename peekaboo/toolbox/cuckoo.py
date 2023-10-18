@@ -85,7 +85,7 @@ class Cuckoo:
     """ Interfaces with a Cuckoo installation via its REST API. """
     def __init__(self, job_queue, url="http://localhost:8090", api_token="",
                  poll_interval=5, submit_original_filename=True,
-                 max_job_age=900, retries=5, backoff=0.5):
+                 max_job_age=900, retries=5, backoff=0.5, use_cape=False):
         """ Initialize the object.
 
         @param job_queue: The job queue to use from now on
@@ -112,6 +112,7 @@ class Cuckoo:
         self.poll_interval = poll_interval
         self.submit_original_filename = submit_original_filename
         self.max_job_age = max_job_age
+        self.use_cape = use_cape
 
         self.retrier = tenacity.AsyncRetrying(
                 stop=tenacity.stop_after_attempt(retries),
@@ -135,6 +136,9 @@ class Cuckoo:
 
         @returns: string representing URL
         """
+
+        if self.use_cape:
+            return f"{ self.url }/apiv2/{ path }/"
         return "%s/%s" % (self.url, path)
 
     # tried backoff decorators here but they're basically not

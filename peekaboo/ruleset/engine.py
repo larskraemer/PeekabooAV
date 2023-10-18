@@ -145,7 +145,8 @@ class RulesetEngine:
                         self.analyzer_config.cuckoo_api_token,
                         self.analyzer_config.cuckoo_poll_interval,
                         self.analyzer_config.cuckoo_submit_original_filename,
-                        self.analyzer_config.cuckoo_maximum_job_age)
+                        self.analyzer_config.cuckoo_maximum_job_age,
+                        self.analyzer_config.use_cape_api)
 
                     awaitable = await self.cuckoo.start_tracker()
                     if not awaitable:

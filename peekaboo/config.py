@@ -527,6 +527,7 @@ class PeekabooAnalyzerConfig(PeekabooConfigParser):
         self.cuckoo_poll_interval = 5
         self.cuckoo_submit_original_filename = True
         self.cuckoo_maximum_job_age = 15*60
+        self.cuckoo_use_cape_api = False
 
         self.cortex_url = 'http://127.0.0.1:9001'
         self.cortex_tlp = tlp.AMBER
@@ -542,6 +543,7 @@ class PeekabooAnalyzerConfig(PeekabooConfigParser):
             'cuckoo_submit_original_filename': [
                 'cuckoo', 'submit_original_filename'],
             'cuckoo_maximum_job_age': ['cuckoo', 'maximum_job_age'],
+            'cuckoo_use_cape_api': ['cuckoo', 'use_cape_api'],
 
             'cortex_url': ['cortex', 'url'],
             'cortex_tlp': ['cortex', 'tlp'],
