@@ -29,7 +29,6 @@ from peekaboo.ruleset import Result, RuleResult
 from peekaboo.ruleset.rules import *
 from peekaboo.toolbox.cuckoo import Cuckoo
 from peekaboo.toolbox.cortex import Cortex
-from peekaboo.toolbox.peekabooyar import ContainsPeekabooYarRule
 from peekaboo.exceptions import PeekabooAnalysisDeferred, \
         PeekabooConfigException, PeekabooRulesetConfigError
 
@@ -55,7 +54,6 @@ class RulesetEngine:
         OfficeMacroWithSuspiciousKeyword,
         RequestsEvilDomainRule,
         CuckooAnalysisFailedRule,
-        ContainsPeekabooYarRule,
         FinalRule
     ]
 
@@ -146,7 +144,7 @@ class RulesetEngine:
                         self.analyzer_config.cuckoo_poll_interval,
                         self.analyzer_config.cuckoo_submit_original_filename,
                         self.analyzer_config.cuckoo_maximum_job_age,
-                        self.analyzer_config.use_cape_api)
+                        self.analyzer_config.cuckoo_use_cape_api)
 
                     awaitable = await self.cuckoo.start_tracker()
                     if not awaitable:

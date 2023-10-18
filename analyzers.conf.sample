@@ -25,6 +25,9 @@
 # installations don't automatically get one.
 #api_token        :    <empty>
 
+# Use CAPEv2 style REST API
+#use_cape_api : no
+
 # Cortex analyzer settings
 [cortex]
 # where to reach the Cortex REST API

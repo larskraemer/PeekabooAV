@@ -85,7 +85,7 @@ class Cuckoo:
     """ Interfaces with a Cuckoo installation via its REST API. """
     def __init__(self, job_queue, url="http://localhost:8090", api_token="",
                  poll_interval=5, submit_original_filename=True,
-                 max_job_age=900, retries=5, backoff=0.5, use_cape=False):
+                 max_job_age=900, use_cape=False, retries=5, backoff=0.5):
         """ Initialize the object.
 
         @param job_queue: The job queue to use from now on
@@ -138,8 +138,11 @@ class Cuckoo:
         """
 
         if self.use_cape:
-            return f"{ self.url }/apiv2/{ path }/"
-        return "%s/%s" % (self.url, path)
+            # CAPE needs the trailing '/' in the url to work
+            # with POST requests... for some reason.
+            return f"{ self.url }/{ path }/"
+        else:
+            return f"{ self.url }/{ path }"
 
     # tried backoff decorators here but they're basically not
     # runtime-configurable
@@ -321,12 +324,30 @@ class Cuckoo:
         # calling the callable FormData finalises it into a BytesPayload and
         # makes it reusable across retries
         json_resp = await self.post("tasks/create/file", payload())
-        if json_resp is None:
-            raise CuckooSubmitFailedException(
-                "Error creating Cuckoo task")
-        if "task_id" not in json_resp:
-            raise CuckooSubmitFailedException(
-                'No job ID present in API response')
+
+        if self.use_cape:
+            if json_resp is None:
+                raise CuckooSubmitFailedException("Error creating Cuckoo task: Empty response")
+            if 'error' not in json_resp or json_resp.error:
+                raise CuckooSubmitFailedException("Error creating Cuckoo task: Got invalid response")
+            if 'data' not in json_resp:
+                raise CuckooSubmitFailedException("Error")
+            resp_data = json_resp['data']
+            if 'task_ids' not in resp_data:
+                raise CuckooSubmitFailedException("Error")
+            task_ids = resp_data['task_ids']
+            if len(task_ids) != 1:
+                raise CuckooSubmitFailedException(f"Error creating Cuckoo task: Unexpected number of task ids in response ({len(task_ids)})")
+            task_id = task_ids[0]
+            
+            
+        else:
+            if json_resp is None:
+                raise CuckooSubmitFailedException(
+                    "Error creating Cuckoo task")
+            if "task_id" not in json_resp:
+                raise CuckooSubmitFailedException(
+                    'No job ID present in API response')
 
         task_id = json_resp["task_id"]
         if not isinstance(task_id, int):
