@@ -325,10 +325,12 @@ class Cuckoo:
         # makes it reusable across retries
         json_resp = await self.post("tasks/create/file", payload())
 
+        task_id = -1
+
         if self.use_cape:
             if json_resp is None:
                 raise CuckooSubmitFailedException("Error creating Cuckoo task: Empty response")
-            if 'error' not in json_resp or json_resp.error:
+            if 'error' not in json_resp or json_resp['error']:
                 raise CuckooSubmitFailedException("Error creating Cuckoo task: Got invalid response")
             if 'data' not in json_resp:
                 raise CuckooSubmitFailedException("Error")
@@ -348,8 +350,8 @@ class Cuckoo:
             if "task_id" not in json_resp:
                 raise CuckooSubmitFailedException(
                     'No job ID present in API response')
+            task_id = json_resp["task_id"]
 
-        task_id = json_resp["task_id"]
         if not isinstance(task_id, int):
             raise CuckooSubmitFailedException(
                 'Invalid data type for job ID in API response')
@@ -392,12 +394,21 @@ class Cuckoo:
                     # ignore and retry on next polling run
                     continue
 
-                if "task" not in job or "status" not in job["task"]:
-                    logger.error("Invalid JSON structure from Cuckoo REST "
-                                 "API: %s", job)
+                if self.use_cape:
+                    if 'error' not in job or 'data' not in job:
+                        logger.error("Invalid JSON structure from Cuckoo REST API: %s", job)
+                        continue
+                    if job['error']:
+                        logger.error("Error from Cuckoo REST API: %s", job)
+
+                    job = job['data']
+
+
+                if "status" not in job:
+                    logger.error("Invalid JSON structure from Cuckoo REST API: %s", job)
                     continue
 
-                if job["task"]["status"] == "reported":
+                if job["status"] == "reported":
                     await self.resubmit_with_report(job_id)
                     continue
 
