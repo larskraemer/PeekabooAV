@@ -252,7 +252,11 @@ class Cuckoo:
             return None
 
         logger.debug('%d: Requesting Cuckoo report', sample.id)
-        report_path = "tasks/report/%d" % job_id
+        report_path = ""
+        if self.use_cape:
+            report_path = f"tasks/get/report/{ job_id }"
+        else:
+            report_path = f"tasks/report/{ job_id }"
         report = await self.get(report_path)
         if report is None:
             # mark analysis as failed if we could not get the report e.g.
@@ -402,7 +406,6 @@ class Cuckoo:
                         logger.error("Error from Cuckoo REST API: %s", job)
 
                     job = job['data']
-
 
                 if "status" not in job:
                     logger.error("Invalid JSON structure from Cuckoo REST API: %s", job)
