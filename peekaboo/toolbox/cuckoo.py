@@ -264,7 +264,7 @@ class Cuckoo:
             sample.mark_cuckoo_failure()
         else:
             try:
-                reportobj = CuckooReport(report, self.request_url(report_path))
+                reportobj = CuckooReport(report, self.request_url(report_path), self.use_cape)
                 sample.register_cuckoo_report(reportobj)
             except schema.SchemaError as err:
                 logger.warning('Report returned from Cuckoo contained '
@@ -451,19 +451,7 @@ class Cuckoo:
 
 
 class CuckooReport:
-    """ Represents a Cuckoo analysis JSON report. """
-    def __init__(self, report=None, url=None):
-        """
-        @param report: hash with report data from Cuckoo
-        @type report: dict
-        @param url: URL where the report was retrieved from
-        @type url: string
-        """
-        self._url = url
-
-        if report is None:
-            report = {}
-
+    def _parse_report_cuckoo(self, report):
         # some common building blocks for reuse
         dns_element_schema = {'request': str}
         description_element_schema = {'description': str}
@@ -516,6 +504,76 @@ class CuckooReport:
         debug = report.get('debug', {})
         self._errors = list(debug.get('errors', []))
         self._server_messages = list(debug.get('cuckoo', []))
+
+    def _parse_report_cape(self, report):
+        # some common building blocks for reuse
+        dns_element_schema = {'request': str}
+        description_element_schema = {'description': str}
+
+        # defaults of optional keys are not validated. Therefore their
+        # validators can't set more default values. So we can only rely on the
+        # validation result to contain the top-level key defaults. To avoid
+        # confusion make no assumptions about optional key existance at all and
+        # only schema compliance. We still use the result though because
+        # ignore_extra_keys has stripped it of extraneous data which protects
+        # us somewhat from accidentally processing it.
+        report = schema.Schema({
+            schema.Optional('network', default={}, ignore_extra_keys=True): {
+                schema.Optional('dns', default=[]): schema.Or(
+                    list([dns_element_schema]),
+                    tuple([dns_element_schema]),
+                    ignore_extra_keys=True),
+                },
+            schema.Optional('signatures', default=[]): schema.Or(
+                list([description_element_schema]),
+                tuple([description_element_schema]),
+                ignore_extra_keys=True),
+            schema.Optional('malscore', default=0.0): schema.Or(int, float),
+            schema.Optional('debug', default={}): {
+                schema.Optional('errors', default=[]): schema.Or(
+                    list([str]),
+                    tuple([str])),
+                schema.Optional('cuckoo', default=[]): schema.Or(
+                    list([str]),
+                    tuple([str])),
+                },
+            }, ignore_extra_keys=True).validate(report)
+
+        self._requested_domains = [
+            domain['request'] for domain in report.get(
+                'network', {}).get('dns', [])]
+
+        self._signature_descriptions = [
+            sig['description'] for sig in report.get('signatures', [])]
+
+        # explicitly convert to the types of our external API here if we accept
+        # multiple types as input (schema.Use could convert as well but does it
+        # before validation in duck-typing fashion which could make us accept
+        # unintended types, e.g. a string because it can be converted to a list
+        # because it's iterable).
+        self._score = float(report.get('malscore', 0.0))
+
+        debug = report.get('debug', {})
+        self._errors = list(debug.get('errors', []))
+        self._server_messages = list(debug.get('cuckoo', []))
+
+    """ Represents a Cuckoo analysis JSON report. """
+    def __init__(self, report=None, url=None, use_cape=False):
+        """
+        @param report: hash with report data from Cuckoo
+        @type report: dict
+        @param url: URL where the report was retrieved from
+        @type url: string
+        """
+        self._url = url
+
+        if report is None:
+            report = {}
+
+        if use_cape:
+            pass
+        else:
+            self._parse_report_cuckoo(report)
 
     @property
     def dump(self):
