@@ -571,7 +571,7 @@ class CuckooReport:
             report = {}
 
         if use_cape:
-            pass
+            self._parse_report_cape(report)
         else:
             self._parse_report_cuckoo(report)
 
